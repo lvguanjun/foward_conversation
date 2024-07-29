@@ -1,96 +1,98 @@
-import http from 'http';
-import https from 'https';
-import { parse } from 'url';
+export const config = {
+  runtime: "edge",
+};
 
-export default function handler(req, res) {
-    const { pathname } = parse(req.url, true);
-    const openaiApiKey = process.env.OPENAI_API_KEY;
+export default async function handler(request) {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
+  const openaiApiKey = process.env.OPENAI_API_KEY;
 
-    let body = [];
-    req.on('data', chunk => body.push(chunk));
-    req.on('end', async () => {
-        body = Buffer.concat(body).toString();
+  if (pathname === "/backend-api/conversation") {
+    // 预处理逻辑
+    const requestBody = await request.clone().json();
+    const userMessages = requestBody.messages
+      .filter(
+        (msg) =>
+          msg.author.role === "user" && msg.content.content_type === "text"
+      )
+      .map((msg) => msg.content.parts.join(" "));
 
-        if (pathname === '/backend-api/conversation') {
-            // 预处理逻辑
-            const requestBody = JSON.parse(body);
-            const userMessages = requestBody.messages
-                .filter(msg => msg.author.role === "user" && msg.content.content_type === "text")
-                .map(msg => msg.content.parts.join(" "));
+    if (userMessages.length > 0) {
+      const moderationResult = await checkContentForModeration(
+        userMessages,
+        openaiApiKey
+      );
+      if (moderationResult.error) {
+        return new Response(
+          JSON.stringify({ detail: "道德审核接口错误，请联系反馈或稍后再试。" }),
+          {
+            status: 503,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+      if (moderationResult.shouldBlock) {
+        return new Response(
+          JSON.stringify({ detail: "公益不易，请珍惜账号喵！" }),
+          {
+            status: 451,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+    }
+  }
 
-            if (userMessages.length > 0) {
-                const moderationResult = await checkContentForModeration(userMessages, openaiApiKey);
-                if (moderationResult.error) {
-                    res.writeHead(503, { 'Content-Type': 'application/json' });
-                    return res.end(JSON.stringify({ detail: "道德审核接口错误，请稍后再试。" }));
-                }
-                if (moderationResult.shouldBlock) {
-                    res.writeHead(451, { 'Content-Type': 'application/json' });
-                    return res.end(JSON.stringify({ detail: "公益不易，请珍惜账号喵！" }));
-                }
-            }
-            // 如果审核通过，转发请求
-            forwardRequest(req, res, body);
-        } else {
-            // 直接转发其他所有请求
-            forwardRequest(req, res, body);
-        }
-    });
+  // 如果审核通过或不是 conversation 请求，转发请求
+  return forwardRequest(request);
 }
 
-function forwardRequest(req, res, body = null) {
-    const baseUrl = 'https://new.oaifree.com';
-    const targetUrl = new URL(req.url, baseUrl);
-    console.log(targetUrl.href);
-    const lib = targetUrl.protocol.startsWith('https') ? https : http;
+async function forwardRequest(req) {
+  const baseUrl = "https://new.oaifree.com";
 
-    req.headers.host = targetUrl.host;
+  const originalUrl = new URL(req.url);
+  const path = originalUrl.pathname + originalUrl.search;
 
-    const requestOptions = {
-        method: req.method,
-        headers: req.headers,
-        host: targetUrl.host,
-        path: targetUrl.pathname + targetUrl.search,
-        servername: targetUrl.hostname,
-    };
+  const targetUrl = new URL(path, baseUrl);
 
-    console.log(requestOptions);
+  const requestInit = {
+    method: req.method,
+    headers: new Headers(req.headers),
+    body: req.body,
+  };
 
-    const proxy = lib.request(targetUrl, requestOptions, proxyRes => {
-        res.writeHead(proxyRes.statusCode, proxyRes.headers);
-        proxyRes.pipe(res, { end: true });
-    });
+  requestInit.headers.set("host", new URL(baseUrl).host);
 
-    if (body) {
-        proxy.write(body);
-    }
-    req.pipe(proxy, { end: true });
+  const response = await fetch(targetUrl.toString(), requestInit);
 
-    proxy.on('error', err => {
-        console.error('Proxy error:', err);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ detail: 'An error occurred during request forwarding.' }));
-    });
+  const { readable, writable } = new TransformStream();
+  response.body.pipeTo(writable);
+
+  return new Response(readable, {
+    headers: response.headers,
+    status: response.status,
+    statusText: response.statusText,
+  });
 }
 
 async function checkContentForModeration(messages, apiKey) {
-    const response = await fetch("https://api.openai.com/v1/moderations", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({ input: messages }),
-    });
+  const response = await fetch("https://api.openai.com/v1/moderations", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ input: messages }),
+  });
 
-    if (response.ok) {
-        const data = await response.json();
-        return {
-            shouldBlock: data.results.some(result => result.flagged),
-            error: false
-        };
-    } else {
-        console.error("Moderation API returned an error:", response.status);
-        return { shouldBlock: false, error: true };
-    }
+  if (response.ok) {
+    const data = await response.json();
+    return {
+      shouldBlock: data.results.some((result) => result.flagged),
+      error: false,
+    };
+  } else {
+    console.error("Moderation API returned an error:", response.status);
+    return { shouldBlock: false, error: true };
+  }
 }
