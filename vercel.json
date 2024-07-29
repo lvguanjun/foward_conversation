@@ -2,15 +2,8 @@
     "version": 2,
     "routes": [
         {
-            "src": "/api/conversation",
-            "methods": [
-                "POST"
-            ],
+            "src": "/(.*)",
             "dest": "/api/conversation.js"
-        },
-        {
-            "src": "/.*",
-            "status": 404
         }
     ],
     "builds": [
