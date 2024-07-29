@@ -1,0 +1,22 @@
+{
+    "version": 2,
+    "routes": [
+        {
+            "src": "/api/conversation",
+            "methods": [
+                "POST"
+            ],
+            "dest": "/api/conversation.js"
+        },
+        {
+            "src": "/.*",
+            "status": 404
+        }
+    ],
+    "builds": [
+        {
+            "src": "api/conversation.js",
+            "use": "@vercel/node"
+        }
+    ]
+}

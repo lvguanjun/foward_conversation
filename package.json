@@ -1,0 +1,13 @@
+{
+    "name": "vercel-api-project",
+    "version": "1.0.0",
+    "scripts": {
+        "start": "node api/conversation.js"
+    },
+    "dependencies": {
+        "node-fetch": "^2.6.7"
+    },
+    "engines": {
+        "node": ">=14"
+    }
+}
