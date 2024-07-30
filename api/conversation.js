@@ -24,7 +24,9 @@ export default async function handler(request) {
       );
       if (moderationResult.error) {
         return new Response(
-          JSON.stringify({ detail: "道德审核接口错误，请联系反馈或稍后再试。" }),
+          JSON.stringify({
+            detail: "道德审核接口错误，请联系反馈或稍后再试。",
+          }),
           {
             status: 503,
             headers: { "Content-Type": "application/json" },
@@ -48,31 +50,24 @@ export default async function handler(request) {
 }
 
 async function forwardRequest(req) {
-  const baseUrl = "https://new.oaifree.com";
+  const url = new URL(req.url);
+  url.host = "new.oaifree.com";
+  url.protocol = "https:";
 
-  const originalUrl = new URL(req.url);
-  const path = originalUrl.pathname + originalUrl.search;
+  // 创建新的 headers，并设置 host
+  const newHeaders = new Headers(req.headers);
+  newHeaders.set("Host", "new.oaifree.com");
 
-  const targetUrl = new URL(path, baseUrl);
-
-  const requestInit = {
+  // 创建新的请求对象
+  const newRequest = new Request(url, {
     method: req.method,
-    headers: new Headers(req.headers),
+    headers: newHeaders,
     body: req.body,
-  };
-
-  requestInit.headers.set("host", new URL(baseUrl).host);
-
-  const response = await fetch(targetUrl.toString(), requestInit);
-
-  const { readable, writable } = new TransformStream();
-  response.body.pipeTo(writable);
-
-  return new Response(readable, {
-    headers: response.headers,
-    status: response.status,
-    statusText: response.statusText,
+    redirect: "manual", // 禁用自动重定向跟随
   });
+
+  // 发送请求并获取响应
+  return fetch(newRequest);
 }
 
 async function checkContentForModeration(messages, apiKey) {
