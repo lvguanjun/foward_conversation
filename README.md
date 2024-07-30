@@ -26,6 +26,7 @@
 在 Vercel 上部署时，您需要设置以下环境变量：
 
 - `OPENAI_API_KEY`: 您的 OpenAI API 密钥，用于道德审核。
+- `OPENAI_BASE_URL`: OpenAI API 的基础 URL。可自定义反代地址，非必填。默认 `https://api.openai.com` 。
 
 ## 本地开发
 

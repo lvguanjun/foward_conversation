@@ -71,7 +71,10 @@ async function forwardRequest(req) {
 }
 
 async function checkContentForModeration(messages, apiKey) {
-  const response = await fetch("https://api.openai.com/v1/moderations", {
+  const OPENAI_BASE_URL =
+    process.env.OPENAI_BASE_URL || "https://api.openai.com";
+  const moderationUrl = OPENAI_BASE_URL + "/v1/moderations";
+  const response = await fetch(moderationUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
