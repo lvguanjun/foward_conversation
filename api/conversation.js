@@ -6,6 +6,11 @@ export default async function handler(request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
   const openaiApiKey = process.env.OPENAI_API_KEY;
+  const moderationErrMsg =
+    process.env.MODERATION_ERROR_MESSAGE ||
+    "道德审核接口错误，请联系反馈或稍后再试。";
+  const moderationBlockMsg =
+    process.env.MODERATION_BLOCK_MESSAGE || "公益不易，请珍惜账号喵！";
 
   if (pathname === "/backend-api/conversation") {
     // 预处理逻辑
@@ -25,7 +30,7 @@ export default async function handler(request) {
       if (moderationResult.error) {
         return new Response(
           JSON.stringify({
-            detail: "道德审核接口错误，请联系反馈或稍后再试。",
+            detail: moderationErrMsg,
           }),
           {
             status: 503,
@@ -35,7 +40,7 @@ export default async function handler(request) {
       }
       if (moderationResult.shouldBlock) {
         return new Response(
-          JSON.stringify({ detail: "公益不易，请珍惜账号喵！" }),
+          JSON.stringify({ detail: moderationBlockMsg }),
           {
             status: 451,
             headers: { "Content-Type": "application/json" },

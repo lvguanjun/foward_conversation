@@ -27,6 +27,8 @@
 
 - `OPENAI_API_KEY`: 您的 OpenAI API 密钥，用于道德审核。
 - `OPENAI_BASE_URL`: OpenAI API 的基础 URL。可自定义反代地址，非必填。默认 `https://api.openai.com` 。
+- `MODERATION_ERROR_MESSAGE`: 道德审核接口返回错误时的提示信息。
+- `MODERATION_BLOCK_MESSAGE`: 道德审核不通过时的提示信息。
 
 ## 本地开发
 
