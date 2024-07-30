@@ -11,7 +11,7 @@ export default async function handler(request) {
     "道德审核接口错误，请联系反馈或稍后再试。";
   const moderationBlockMsg =
     process.env.MODERATION_BLOCK_MESSAGE || "公益不易，请珍惜账号喵！";
-  const maxMessages = process.env.MAX_MESSAGES || 1;
+  const maxMessages = parseInt(process.env.MAX_MESSAGES) || 1;
   const excessMsg = process.env.EXCESS_MESSAGE || moderationBlockMsg;
 
   if (pathname === "/backend-api/conversation") {
