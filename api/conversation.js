@@ -11,16 +11,39 @@ export default async function handler(request) {
     "道德审核接口错误，请联系反馈或稍后再试。";
   const moderationBlockMsg =
     process.env.MODERATION_BLOCK_MESSAGE || "公益不易，请珍惜账号喵！";
+  const maxMessages = process.env.MAX_MESSAGES || 1;
+  const excessMsg = process.env.EXCESS_MESSAGE || moderationBlockMsg;
 
   if (pathname === "/backend-api/conversation") {
     // 预处理逻辑
     const requestBody = await request.clone().json();
+    const messages = requestBody.messages;
+    if (messages.length > maxMessages) {
+      console.log("Excess messages:", messages.length);
+      return new Response(
+        JSON.stringify({
+          detail: excessMsg,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const userMessages = requestBody.messages
       .filter(
         (msg) =>
-          msg.author.role === "user" && msg.content.content_type === "text"
+          msg.author.role === "user" &&
+          (msg.content.content_type === "text" ||
+            (msg.content.content_type === "multimodal_text" &&
+              msg.content.parts.some((part) => typeof part === "string")))
       )
-      .map((msg) => msg.content.parts.join(" "));
+      .map((msg) =>
+        msg.content.parts
+          .filter((part) => typeof part === "string") // 只提取字符串部分
+          .join("\n")
+      );
 
     if (userMessages.length > 0) {
       const moderationResult = await checkContentForModeration(
@@ -39,13 +62,10 @@ export default async function handler(request) {
         );
       }
       if (moderationResult.shouldBlock) {
-        return new Response(
-          JSON.stringify({ detail: moderationBlockMsg }),
-          {
-            status: 451,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+        return new Response(JSON.stringify({ detail: moderationBlockMsg }), {
+          status: 451,
+          headers: { "Content-Type": "application/json" },
+        });
       }
     }
   }
