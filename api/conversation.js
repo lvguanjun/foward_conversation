@@ -76,12 +76,12 @@ export default async function handler(request) {
 
 async function forwardRequest(req) {
   const url = new URL(req.url);
-  url.host = "new.oaifree.com";
+  url.host = "chatpro.ai-pro.org";
   url.protocol = "https:";
 
   // 创建新的 headers，并设置 host
   const newHeaders = new Headers(req.headers);
-  newHeaders.set("Host", "new.oaifree.com");
+  newHeaders.set("Host", "chatpro.ai-pro.org");
 
   // 创建新的请求对象
   const newRequest = new Request(url, {
