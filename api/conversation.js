@@ -54,7 +54,8 @@ export default async function handler(request) {
       if (moderationResult.error) {
         return new Response(
           JSON.stringify({
-            detail: moderationErrMsg,
+            message: moderationErrMsg,
+            flagged:true
           }),
           {
             status: 503,
