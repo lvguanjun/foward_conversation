@@ -64,7 +64,7 @@ export default async function handler(request) {
       }
       if (moderationResult.shouldBlock) {
         return new Response(JSON.stringify({ message: moderationBlockMsg, flagged: true }), {
-          status: 451,
+          status: 200,
           headers: { "Content-Type": "application/json" },
         });
       }
