@@ -22,7 +22,8 @@ export default async function handler(request) {
       console.log("Excess messages:", messages.length);
       return new Response(
         JSON.stringify({
-          detail: excessMsg,
+          message: excessMsg,
+          flagged:true
         }),
         {
           status: 200,
@@ -62,7 +63,7 @@ export default async function handler(request) {
         );
       }
       if (moderationResult.shouldBlock) {
-        return new Response(JSON.stringify({ detail: moderationBlockMsg }), {
+        return new Response(JSON.stringify({ message: moderationBlockMsg, flagged: true }), {
           status: 451,
           headers: { "Content-Type": "application/json" },
         });
@@ -116,6 +117,6 @@ async function checkContentForModeration(messages, apiKey) {
     };
   } else {
     console.error("Moderation API returned an error:", response.status);
-    return { shouldBlock: false, error: true };
+    return { shouldBlock: true, error: true };
   }
 }
